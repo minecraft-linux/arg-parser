@@ -13,12 +13,10 @@ class arg {
 private:
     T value;
 
-    void handle_value(arg_list& list);
-
 public:
     arg(arg_parser& parser, std::string const& name, std::string const& shortname, std::string const& desc, T def = T())
             : value(def) {
-        parser.add_arg(name, shortname, desc, std::bind(&arg<T>::handle_value, this, std::placeholders::_1));
+        parser.add_arg(name, shortname, desc, [this](arg_list& list) { handle_value(value, list); });
     }
 
     T const& get() const {
@@ -31,23 +29,19 @@ public:
 
 };
 
-template <>
-void arg<std::string>::handle_value(arg_list& list) {
+inline void handle_value(std::string& value, arg_list& list) {
     value = list.next();
 }
 
-template <>
-void arg<int>::handle_value(arg_list& list) {
+inline void handle_value(int& value, arg_list& list) {
     value = std::stoi(list.next());
 }
 
-template <>
-void arg<float>::handle_value(arg_list& list) {
+inline void handle_value(float& value, arg_list& list) {
     value = std::stof(list.next());
 }
 
-template <>
-void arg<bool>::handle_value(arg_list& list) {
+inline void handle_value(bool& value, arg_list& list) {
     const char* v = list.next_value_or_null();
     if (v == nullptr ||
             strcmp(v, "1") == 0 || strcasecmp(v, "true") == 0 || strcasecmp(v, "on") == 0 || strcasecmp(v, "yes") == 0)
@@ -56,6 +50,11 @@ void arg<bool>::handle_value(arg_list& list) {
         value = false;
     else
         throw std::invalid_argument("Invalid boolean value");
+}
+
+template <typename T>
+void handle_value(std::vector<T>& value, arg_list& list) {
+    handle_value(value.emplace_back(), list);
 }
 
 }
